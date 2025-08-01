@@ -1,0 +1,21 @@
+[runner]
+magicEnabled = false
+
+[server]
+enableCORS = false
+enableXsrfProtection = false
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
+
+[global]
+# This section tells Streamlit Cloud to download NLTK data
+# during the deployment process.
+# Add any NLTK packages your app needs here.
+# For stopwords, use "stopwords".
+# For other packages like 'punkt', add "punkt".
+# Example: "stopwords", "punkt", "wordnet"
+nltk_data = ["stopwords"]

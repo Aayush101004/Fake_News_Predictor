@@ -52,11 +52,7 @@ def load_and_preprocess_data(delimiter=','):
         stemmed_content = re.sub('[^a-zA-Z]', ' ', content)
         stemmed_content = stemmed_content.lower()
         stemmed_content = stemmed_content.split()
-        try:
-            stemmed_content = [ps.stem(word) for word in stemmed_content if word not in stopwords.words('english')]
-        except LookupError:
-            st.error("NLTK 'stopwords' not found. Please run 'import nltk; nltk.download(\"stopwords\")' in your environment.")
-            st.stop()
+        stemmed_content = [ps.stem(word) for word in stemmed_content if word not in stopwords.words('english')]
         stemmed_content = ' '.join(stemmed_content)
         return stemmed_content
 
