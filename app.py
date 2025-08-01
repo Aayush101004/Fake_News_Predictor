@@ -1,12 +1,18 @@
 import os
 import re
 
+# --- NLTK Data Download (Most Robust for Streamlit Cloud) ---
+# This ensures stopwords are downloaded before any cached functions try to use them.
+import nltk
 import numpy as np
 import pandas as pd
 import streamlit as st
-import wikipedia
+import tensorflow as tf
+import wikipedia  # You imported this, assuming you want to use it for search
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
+from sklearn.metrics import \
+    confusion_matrix  # You imported this for terminal output
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.layers import (Dense, Dropout, Embedding,
                                      GlobalAveragePooling1D)
@@ -14,12 +20,17 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.preprocessing.text import Tokenizer
 
+try:
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('stopwords')
+# -----------------------------------------------------------
 
 @st.cache_data
-def load_and_preprocess_data(delimiter=','):
+def load_and_preprocess_data(true_file_path='True.csv', false_file_path='Fake.csv', delimiter=','):
     try:
-        true_df = pd.read_csv('True.csv', sep=delimiter)
-        fake_df = pd.read_csv('Fake.csv', sep=delimiter)
+        true_df = pd.read_csv(true_file_path, sep=delimiter)
+        fake_df = pd.read_csv(false_file_path, sep=delimiter)
     except FileNotFoundError as e:
         st.error(f"Error: One or more data files not found ({e}). Please ensure 'True.csv' and 'Fake.csv' are in the same directory as 'app.py'.")
         st.stop()
@@ -27,11 +38,9 @@ def load_and_preprocess_data(delimiter=','):
         st.error(f"Error loading data files: {e}. Please check the delimiter and file formats.")
         st.stop()
 
-    # Assign labels: 0 for true, 1 for fake
     true_df['label'] = 0
     fake_df['label'] = 1
 
-    # Use 'title' if present, else 'text'
     if 'title' in true_df.columns and 'title' in fake_df.columns:
         text_col = 'title'
     elif 'text' in true_df.columns and 'text' in fake_df.columns:
@@ -40,7 +49,6 @@ def load_and_preprocess_data(delimiter=','):
         st.error("No common 'title' or 'text' column found in both True.csv and Fake.csv.")
         st.stop()
 
-    # Concatenate and drop missing
     news_df = pd.concat([true_df, fake_df], ignore_index=True)
     news_df.dropna(subset=[text_col], inplace=True)
 
@@ -52,12 +60,12 @@ def load_and_preprocess_data(delimiter=','):
         stemmed_content = re.sub('[^a-zA-Z]', ' ', content)
         stemmed_content = stemmed_content.lower()
         stemmed_content = stemmed_content.split()
+        # No try-except LookupError here, as download is handled globally
         stemmed_content = [ps.stem(word) for word in stemmed_content if word not in stopwords.words('english')]
         stemmed_content = ' '.join(stemmed_content)
         return stemmed_content
 
     news_df[text_col] = news_df[text_col].astype(str).apply(stemming)
-    # For compatibility with rest of code, rename to 'title'
     news_df = news_df.rename(columns={text_col: 'title'})
     return news_df
 
@@ -98,11 +106,19 @@ def train_model(news_df_processed):
         validation_data=(X_test, y_test),
         verbose=0
     )
-    return model, tokenizer, max_len, padding_type, trunc_type
+    return model, tokenizer, max_len, padding_type, trunc_type, X_test, y_test
 
 news_df_processed = load_and_preprocess_data()
 
-model, tokenizer, max_len, padding_type, trunc_type = train_model(news_df_processed)
+model, tokenizer, max_len, padding_type, trunc_type, X_test_cached, y_test_cached = train_model(news_df_processed)
+
+y_pred_proba = model.predict(X_test_cached)
+y_pred = (y_pred_proba > 0.5).astype(int)
+
+cm = confusion_matrix(y_test_cached, y_pred)
+print("\n--- Confusion Matrix (Terminal Output) ---")
+print(cm)
+print("------------------------------------------\n")
 
 st.set_page_config(page_title="Fake News Detector", layout="centered")
 
@@ -140,11 +156,8 @@ def predict_news_category(text):
         stemmed_content = re.sub('[^a-zA-Z]', ' ', content)
         stemmed_content = stemmed_content.lower()
         stemmed_content = stemmed_content.split()
-        try:
-            stemmed_content = [ps_local.stem(word) for word in stemmed_content if word not in stopwords.words('english')]
-        except LookupError:
-            st.error("NLTK 'stopwords' not found. Please run 'import nltk; nltk.download(\"stopwords\")' in your environment.")
-            st.stop()
+        # No try-except LookupError here, as download is handled globally
+        stemmed_content = [ps_local.stem(word) for word in stemmed_content if word not in stopwords.words('english')]
         stemmed_content = ' '.join(stemmed_content)
         return stemmed_content
 
@@ -158,8 +171,7 @@ def predict_news_category(text):
 
     return prediction_label, prediction_proba
 
-def perform_wikipedia_search(query, is_fact_check=False):
-    # Wikipedia summary fetcher
+def perform_wikipedia_search(query): # Removed is_fact_check as it's not used by wikipedia.summary
     try:
         summary = wikipedia.summary(query, sentences=3, auto_suggest=True, redirect=True)
         page = wikipedia.page(query, auto_suggest=True, redirect=True)
@@ -169,7 +181,7 @@ def perform_wikipedia_search(query, is_fact_check=False):
             'snippet': summary
         }]
     except wikipedia.DisambiguationError as e:
-        st.warning(f"Your query is ambiguous. Please be more specific. Options: {e.options[:5]}")
+        st.warning(f"Your query is ambiguous. Please be more specific. Options: {', '.join(e.options[:5])}") # Improved message
         return []
     except wikipedia.PageError:
         st.warning("No Wikipedia page found for this query.")
@@ -197,7 +209,7 @@ if st.button('Analyze News', help="Click to analyze the entered news title."):
                 st.write(f"Confidence (Fake): **{proba*100:.2f}%**")
                 st.write(f"Confidence (Real): {(1-proba)*100:.2f}%")
 
-                st.subheader("Wikipedia Summary:")
+                st.subheader("Wikipedia Summary (for context):")
                 search_results = perform_wikipedia_search(input_text)
                 if search_results:
                     for i, result in enumerate(search_results):
@@ -205,10 +217,13 @@ if st.button('Analyze News', help="Click to analyze the entered news title."):
                         st.write(result['snippet'])
                         st.markdown("---")
                 else:
-                    st.write("No Wikipedia summary found. Trying Google search link:")
-                    wiki_url = generate_google_search_url(input_text)
-                    st.markdown(f"Click [here]({wiki_url}) to search Google for more information.")
-                    st.info("This link will open a Google search in a new tab.")
+                    st.write("No Wikipedia summary found.")
+
+                st.write("For fact-checking, try a Google search:")
+                fact_check_query = f"fact check {input_text}"
+                fact_check_url = generate_google_search_url(fact_check_query)
+                st.markdown(f"Click [here]({fact_check_url}) to search Google for fact-checks on this news.")
+                st.info("This link will open a Google search in a new tab.")
 
             else:
                 st.markdown("<h3 style='color: #28A745;'>✅ This News is Likely REAL!</h3>", unsafe_allow_html=True)
@@ -223,15 +238,16 @@ if st.button('Analyze News', help="Click to analyze the entered news title."):
                         st.write(result['snippet'])
                         st.markdown("---")
                 else:
-                    st.write("No Wikipedia summary found. Trying Google search link:")
-                    wiki_url = generate_google_search_url(input_text)
-                    st.markdown(f"Click [here]({wiki_url}) to search Google for more information.")
-                    st.info("This link will open a Google search in a new tab.")
+                    st.write("No Wikipedia summary found.")
+
+                st.write("For more information, try a Google search:")
+                similar_news_url = generate_google_search_url(input_text)
+                st.markdown(f"Click [here]({similar_news_url}) to search Google for similar news.")
+                st.info("This link will open a Google search in a new tab.")
 
             st.markdown("---")
             st.info("Disclaimer: This model is for demonstrative purposes and may not be 100% accurate. Always verify information from multiple reliable sources.")
         else:
             st.warning("Please enter some text to analyze.")
     else:
-        st.warning("Please enter some text to analyze.")
         st.warning("Please enter some text to analyze.")
