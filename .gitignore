@@ -1,0 +1,30 @@
+my_project_env/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python/
+env/
+venv/
+*.env # Ignore .env files if you use python-dotenv for local environment variables
+
+# IDE and OS specific ignores
+.vscode/ # VS Code settings
+.idea/   # PyCharm settings
+*.swp    # Vim swap files
+*~       # Emacs backup files
+.DS_Store # macOS specific
+Thumbs.db # Windows specific
+
+# Streamlit specific ignores
+.streamlit/secrets.toml # For Streamlit Cloud secrets (if you deploy there)
+
+# Data files (uncomment if you do NOT want to commit your datasets)
+# True.csv
+# False.csv
+
+# Other common temporary files
+*.log
+*.tmp
+*.bak
