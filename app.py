@@ -1,9 +1,9 @@
 import os  # Keep for os.getenv if using .env, otherwise can remove
 import re
 
-# --- NLTK Data Download (Most Robust for Streamlit Cloud) ---
-# This ensures stopwords are downloaded before any cached functions try to use them.
 import nltk
+
+nltk.download('stopwords')  # Unconditional download at startup
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -11,8 +11,7 @@ import tensorflow as tf
 import wikipedia  # For Wikipedia search
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
-from sklearn.metrics import \
-    confusion_matrix  # For terminal output of confusion matrix
+from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.layers import (Dense, Dropout, Embedding,
                                      GlobalAveragePooling1D)
@@ -20,11 +19,6 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.preprocessing.text import Tokenizer
 
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords')
-# -----------------------------------------------------------
 
 @st.cache_data
 def load_and_preprocess_data(true_file_path='True.csv', false_file_path='Fake.csv', delimiter=','):
@@ -76,9 +70,9 @@ def train_model(news_df_processed):
     X = news_df_processed['title'].values
     y = news_df_processed['label'].values
 
-    vocab_size = 10000
-    embedding_dim = 100
-    max_len = 100
+    vocab_size = 5000  # Reduced for resource constraints
+    embedding_dim = 50  # Reduced for resource constraints
+    max_len = 50  # Reduced for resource constraints
     trunc_type = 'post'
     padding_type = 'post'
 
@@ -103,7 +97,7 @@ def train_model(news_df_processed):
 
     model.fit(
         X_train, y_train,
-        epochs=20,
+        epochs=15,  # Reduced for resource constraints
         batch_size=32,
         validation_data=(X_test, y_test),
         verbose=0
@@ -241,5 +235,4 @@ if st.button('Analyze News', help="Click to analyze the entered news title."):
         else:
             st.warning("Please enter some text to analyze.")
     else:
-        st.warning("Please enter some text to analyze.")
         st.warning("Please enter some text to analyze.")
