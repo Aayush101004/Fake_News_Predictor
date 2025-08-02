@@ -104,12 +104,18 @@ def train_model(news_df_processed):
     )
     return model, tokenizer, max_len, padding_type, trunc_type, X_test, y_test
 
+
+# Load and preprocess data (cached)
 news_df_processed = load_and_preprocess_data()
 
+# Train model (cached). For production, consider training offline and loading a pre-trained model here.
 model, tokenizer, max_len, padding_type, trunc_type, X_test_cached, y_test_cached = train_model(news_df_processed)
 
-y_pred_proba = model.predict(X_test_cached)
-y_pred = (y_pred_proba > 0.5).astype(int)
+# NOTE: Removed test set prediction at startup to save memory.
+# For production, replace the above with code to load a pre-trained model, e.g.:
+# from tensorflow.keras.models import load_model
+# model = load_model('my_model.h5')
+# and load tokenizer/max_len/etc. from files.
 
 st.set_page_config(page_title="Fake News Detector", layout="centered")
 
