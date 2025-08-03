@@ -1,9 +1,16 @@
 import os  # Keep for os.getenv if using .env, otherwise can remove
 import re
 
+nltk.download('stopwords')  # Unconditional download at startup
 import nltk
 
-nltk.download('stopwords')  # Unconditional download at startup
+
+# Download stopwords only once per session using Streamlit singleton cache
+@st.cache_resource(show_spinner=False)
+def download_nltk_stopwords():
+    nltk.download('stopwords')
+
+download_nltk_stopwords()
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -241,4 +248,5 @@ if st.button('Analyze News', help="Click to analyze the entered news title."):
         else:
             st.warning("Please enter some text to analyze.")
     else:
+        st.warning("Please enter some text to analyze.")
         st.warning("Please enter some text to analyze.")
