@@ -141,7 +141,7 @@ st.markdown("""
         '>Fake News Detector</span>
     </h1>
 """, unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-size: 1.1em;'>Enter a news article title below to determine if it's likely real or fake using a deep learning model.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 1.1em;'>Enter a news article title below to determine if it's likely real or fake.</p>", unsafe_allow_html=True)
 
 input_text = st.text_area(
     'Enter News Article Title Here:',
