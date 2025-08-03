@@ -1,8 +1,9 @@
 import os  # Keep for os.getenv if using .env, otherwise can remove
 import re
 
-nltk.download('stopwords')  # Unconditional download at startup
 import nltk
+
+nltk.download('stopwords')  # Unconditional download at startup
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -248,6 +249,7 @@ if st.button('Analyze News', help="Click to analyze the entered news title."):
         else:
             st.warning("Please enter some text to analyze.")
     else:
+        st.warning("Please enter some text to analyze.")
         st.warning("Please enter some text to analyze.")
         st.warning("Please enter some text to analyze.")
         st.warning("Please enter some text to analyze.")
